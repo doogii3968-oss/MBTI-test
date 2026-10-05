@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MBTI Fun Test 🧠</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:Arial,sans-serif;
+ background:linear-gradient(135deg,#d8b4fe,#bae6fd);
+ min-height:100vh;color:#29243a
+}
+.wrap{max-width:520px;margin:auto;padding:20px}
+.card{
+ background:#fff;border-radius:28px;padding:25px 20px;
+ box-shadow:0 15px 40px #0002
+}
+.center{text-align:center}
+.emoji{font-size:60px}
+h1{font-size:30px}
+.sub{color:#777;line-height:1.6}
+input{
+ width:100%;padding:16px;border:2px solid #eee;
+ border-radius:16px;font-size:17px;margin:12px 0
+}
+button{
+ width:100%;padding:16px;border:0;border-radius:16px;
+ font-size:16px;font-weight:bold;cursor:pointer
+}
+.main{background:#29243a;color:white;margin-top:10px}
+.option{
+ background:white;border:2px solid #eee;
+ text-align:left;margin:8px 0
+}
+.option:hover{border-color:#a855f7;background:#faf5ff}
+.progress{
+ height:9px;background:#eee;border-radius:20px;
+ overflow:hidden;margin:18px 0
+}
+.bar{
+ height:100%;background:#a855f7;width:0;
+ transition:.3s
+}
+.question{font-size:22px;font-weight:bold;line-height:1.4}
+.small{font-size:13px;color:#888}
+.type{font-size:50px;font-weight:900}
+.badge{
+ display:inline-block;background:#f0e3ff;
+ padding:8px 15px;border-radius:30px;font-weight:bold
+}
+.desc{color:#666;line-height:1.6}
+.stats{
+ margin-top:25px;text-align:left;
+ border-top:1px solid #eee;padding-top:18px
+}
+.stat{
+ display:flex;justify-content:space-between;
+ padding:7px 0
+}
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+<div class="card">
+
+<!-- START -->
+<div id="start" class="center">
+
+<div class="emoji">🧠✨</div>
+
+<h1>MBTI FUN TEST</h1>
+
+<p class="sub">
+12 хөгжилтэй асуултад хариулаад<br>
+өөрийн MBTI төрлөө олоорой 😎
+</p>
+
+<input id="name" placeholder="👤 Нэрээ оруулна уу">
+
+<button class="main" onclick="startTest()">
+🚀 Тест эхлүүлэх
+</button>
+
+<p class="small">
+Нэр болон MBTI үр дүн статистикт хадгалагдана.
+</p>
+
+</div>
+
+
+<!-- QUIZ -->
+<div id="quiz" class="hidden">
+
+<div class="small" id="number"></div>
+
+<div class="progress">
+<div class="bar" id="bar"></div>
+</div>
+
+<div class="question" id="question"></div>
+
+<div id="options"></div>
+
+</div>
+
+
+<!-- RESULT -->
+<div id="result" class="hidden center">
+
+<div class="emoji" id="emoji"></div>
+
+<p>🎉 <b id="person"></b>, чиний MBTI:</p>
+
+<div class="type" id="type"></div>
+
+<div class="badge" id="typeName"></div>
+
+<p class="desc" id="description"></p>
+
+<div class="stats">
+
+<h3>📊 Манай тестийн статистик</h3>
+
+<p>
+👥 Нийт оролцогч:
+<b id="total">0</b>
+</p>
+
+<div id="statistics"></div>
+
+</div>
+
+<button class="main" onclick="location.reload()">
+🔄 Дахин бөглөх
+</button>
+
+</div>
+
+</div>
+</div>
+
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+
+/* =====================================
+   FIREBASE ТОХИРГОО
+   ЭНД ДАРАА НЬ ӨӨРИЙН CONFIG-ОО ХИЙНЭ
+===================================== */
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "YOUR_DATABASE_URL",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+
+/* =====================================
+   АСУУЛТУУД
+===================================== */
+
+const questions=[
+
+{
+q:"Гэнэт найзууд чинь “Орой уулзъя!” гэвэл?",
+o:[
+["🔥 Шууд явна! Хаана вэ?","E"],
+["😌 Хэдүүлээ вэ? Жаахан бодъё.","I"]
+]
+},
+
+{
+q:"Шинэ газар очиход хамгийн түрүүнд?",
+o:[
+["👥 Хүмүүс, уур амьсгал","E"],
+["👀 Орчин, жижиг деталь","I"]
+]
+},
+
+{
+q:"Найз чинь асуудлаа яривал?",
+o:[
+["❤️ Эхлээд мэдрэмжийг нь сонсоно","F"],
+["🧠 Яаж шийдэхийг нь бодно","T"]
+]
+},
+
+{
+q:"Аялалд явахдаа?",
+o:[
+["📋 Бүхнийг урьдчилж төлөвлөнө","J"],
+["🎲 Очоод шийдье!","P"]
+]
+},
+
+{
+q:"Шинэ санаа сонсоод?",
+o:[
+["🚀 “Үүнийг бүр том болгож болно!”","N"],
+["🔧 “Яг яаж хийх вэ?”","S"]
+]
+},
+
+{
+q:"Ганцаараа бүтэн өдөр байх боломж гарвал?",
+o:[
+["😎 YES! Эцэст нь ганцаараа!","I"],
+["🥳 Хэн нэгэнтэй уулзмаар байна","E"]
+]
+},
+
+{
+q:"Маргаан гарахад чи?",
+o:[
+["⚖️ Баримт, логикоор ярья","T"],
+["💗 Хэнийг ч гомдоохгүй байхыг бодно","F"]
+]
+},
+
+{
+q:"Маргааш хийх зүйлээ?",
+o:[
+["📝 Өнөөдөр нь төлөвлөчихнө","J"],
+["😂 Маргаашийн би шийднэ","P"]
+]
+},
+
+{
+q:"Хэн нэгэн “Надад нэг нууц байна” гэвэл?",
+o:[
+["👀 ЯРЬ! Би сонсож байна!","E"],
+["🤐 Хэлэхийг хүсэхгүй бол зүгээр","I"]
+]
+},
+
+{
+q:"Шинэ төсөл өгвөл?",
+o:[
+["💡 Том зураг, боломжууд нь сонирхолтой","N"],
+["📌 Яг хийх алхмууд нь чухал","S"]
+]
+},
+
+{
+q:"Найз чинь буруу шийдвэр гаргах гэж байвал?",
+o:[
+["🧠 Логикоор тайлбарлана","T"],
+["❤️ Яагаад ингэж байгааг нь ойлгоод ярилцана","F"]
+]
+},
+
+{
+q:"Төлөвлөгөө гэнэт өөрчлөгдвөл?",
+o:[
+["😵 “Гэхдээ бид төлөвлөсөн шүү дээ!”","J"],
+["🤩 “Окей! Шинэ адал явдал!”","P"]
+]
+}
+
+];
+
+
+/* =====================================
+   MBTI ТӨРЛҮҮД
+===================================== */
+
+const info={
+
+INTJ:["🦉","Стратегич","Холыг хардаг, төлөвлөгөөтэй, системтэй боддог."],
+INTP:["🧪","Судлаач","Логик, сонирхолтой санаа, “яагаад?” гэдэг асуултад дуртай."],
+ENTJ:["👑","Командлагч","Зорилго тавьж, хүмүүсийг хөдөлгөж, үр дүн гаргадаг."],
+ENTP:["⚡","Шинийг санаачлагч","Шинэ санаа, боломж, сонирхолтой маргаанд дуртай."],
+
+INFJ:["🌙","Зөнч","Хүмүүсийг гүн ойлгож, утга учиртай зүйл хийхийг хүсдэг."],
+INFP:["🌸","Мөрөөдөгч","Мэдрэмж, үнэ цэн, төсөөлөл нь хүч нь болдог."],
+ENFJ:["☀️","Урамшуулагч","Хүмүүсийг нэгтгэж, дэмжиж, урам өгдөг."],
+ENFP:["🦋","Адал явдалт мөрөөдөгч","Эрч хүч, шинэ санаа, боломж бүрийг сонирхдог."],
+
+ISTJ:["📚","Хариуцлагатай","Тууштай, найдвартай, ажлаа зөв хийхийг эрхэмлэдэг."],
+ISFJ:["🫶","Хамгаалагч","Анхаарал халамжтай, найдвартай, бусдыг анзаардаг."],
+ESTJ:["📣","Зохион байгуулагч","Аливааг эмхэлж, шийдвэр гаргаж, ажил хэрэг болгодог."],
+ESFJ:["💐","Халамжлагч","Хүмүүстэй сайхан харилцаж, багийн уур амьсгал бүрдүүлдэг."],
+
+ISTP:["🛠️","Механикч","Асуудлыг тайван ажиглаад практик шийдэл олдог."],
+ISFP:["🎨","Уран бүтээлч","Чөлөөтэй, мэдрэмжтэй, өөрийнхөөрөө амьдрах дуртай."],
+ESTP:["🏎️","Адал явдалчин","Шуурхай шийдвэр гаргаж, адал явдалд дуртай."],
+ESFP:["🎉","Баясгагч","Хөгжилтэй, эрч хүчтэй, хүмүүсийн уур амьсгалыг өргөдөг."]
+};
+
+
+let current=0;
+
+let scores={
+E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0
+};
+
+let userName="";
+
+
+function startTest(){
+
+userName=document.getElementById("name").value.trim();
+
+if(!userName){
+alert("Нэрээ оруулна уу 😊");
+return;
+}
+
+current=0;
+
+scores={
+E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0
+};
+
+document.getElementById("start").classList.add("hidden");
+document.getElementById("quiz").classList.remove("hidden");
+
+showQuestion();
+
+}
+
+
+function showQuestion(){
+
+let q=questions[current];
+
+document.getElementById("number").textContent=
+`${current+1} / ${questions.length}`;
+
+document.getElementById("bar").style.width=
+`${current/questions.length*100}%`;
+
+document.getElementById("question").textContent=q.q;
+
+let box=document.getElementById("options");
+
+box.innerHTML="";
+
+q.o.forEach(x=>{
+
+let b=document.createElement("button");
+
+b.className="option";
+
+b.textContent=x[0];
+
+b.onclick=()=>answer(x[1]);
+
+box.appendChild(b);
+
+});
+
+}
+
+
+function answer(type){
+
+scores[type]++;
+
+current++;
+
+if(current<questions.length){
+
+showQuestion();
+
+}else{
+
+finish();
+
+}
+
+}
+
+
+async function finish(){
+
+let mbti=
+
+(scores.E>=scores.I?"E":"I")+
+(scores.S>=scores.N?"S":"N")+
+(scores.T>=scores.F?"T":"F")+
+(scores.J>=scores.P?"J":"P");
+
+
+let data={
+name:userName,
+mbti:mbti,
+time:Date.now()
+};
+
+
+/* DATABASE-Д ХАДГАЛНА */
+
+try{
+
+await db.ref("results").push(data);
+
+}catch(e){
+
+console.log(e);
+
+}
+
+
+showResult(mbti);
+
+}
+
+
+function showResult(mbti){
+
+let d=info[mbti];
+
+document.getElementById("quiz").classList.add("hidden");
+document.getElementById("result").classList.remove("hidden");
+
+document.getElementById("emoji").textContent=d[0];
+document.getElementById("person").textContent=userName;
+document.getElementById("type").textContent=mbti;
+document.getElementById("typeName").textContent=d[1];
+document.getElementById("description").textContent=d[2];
+
+loadStatistics();
+
+}
+
+
+/* =====================================
+   СТАТИСТИК
+===================================== */
+
+function loadStatistics(){
+
+db.ref("results").on("value",snapshot=>{
+
+let total=0;
+
+let count={
+INTJ:0,INTP:0,ENTJ:0,ENTP:0,
+INFJ:0,INFP:0,ENFJ:0,ENFP:0,
+ISTJ:0,ISFJ:0,ESTJ:0,ESFJ:0,
+ISTP:0,ISFP:0,ESTP:0,ESFP:0
+};
+
+snapshot.forEach(child=>{
+
+let r=child.val();
+
+if(r.mbti && count[r.mbti]!==undefined){
+
+count[r.mbti]++;
+total++;
+
+}
+
+});
+
+document.getElementById("total").textContent=total;
+
+let html="";
+
+Object.keys(count).forEach(type=>{
+
+if(count[type]>0){
+
+html+=`
+<div class="stat">
+<span>${type}</span>
+<b>${count[type]}</b>
+</div>
+`;
+
+}
+
+});
+
+document.getElementById("statistics").innerHTML=
+html || "<p class='small'>Одоогоор статистик алга.</p>";
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
